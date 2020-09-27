@@ -10,7 +10,9 @@ from utils.AQI import cal_aqi
 
 
 class AirConditionDataset(Dataset):
-    def __init__(self, path: str, dist_threshold: float = 5, seq_len: int = 8, with_aqi: bool = True):
+    def __init__(self, path: str, pred_time_step: int, dist_threshold: float = 5, seq_len: int = 8,
+                 with_aqi: bool = True):
+        self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len
 
@@ -67,10 +69,13 @@ class AirConditionDataset(Dataset):
                 self.__air_conditions[date - min_date, :, -1] = cal_aqi(self.__air_conditions[date - min_date, :, 2:8])
 
     def __len__(self):
-        return self.__air_conditions.shape[0] - self.__seq_len + 1
+        return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step + 1
 
     def __getitem__(self, idx):
-        return self.__air_conditions[idx:idx + self.__seq_len]
+        return {
+            'seq': self.__air_conditions[idx:idx + self.__seq_len],
+            'label': self.__air_conditions[idx + self.__seq_len + self.__pred_time_step]
+        }
 
     @property
     def adjacent_matrix(self):
@@ -78,11 +83,11 @@ class AirConditionDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = AirConditionDataset('/mnt/airlab/data', 5, 5, True)
+    dataset = AirConditionDataset('/mnt/airlab/data', seq_len=5, pred_time_step=7, with_aqi=True)
     data_loader = DataLoader(dataset, shuffle=True, batch_size=3)
     for idx, data in enumerate(data_loader):
-        print(idx, data.shape)
+        print(idx, data['seq'].shape, data['label'].shape)
         if idx > 2:
             break
     print(data_loader.dataset.adjacent_matrix.shape)
-    # TODO: verify correctness
+    # TODO: verify
