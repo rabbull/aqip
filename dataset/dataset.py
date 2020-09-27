@@ -84,4 +84,5 @@ if __name__ == '__main__':
         print(idx, data.shape)
         if idx > 2:
             break
+    print(data_loader.dataset.adjacent_matrix.shape)
     # TODO: verify correctness
