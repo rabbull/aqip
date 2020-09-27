@@ -10,9 +10,9 @@ from utils.AQI import cal_aqi
 
 
 class AirConditionDataset(Dataset):
-    def __init__(self, path: str, dist_threshold: float = 5, seq_size: int = 8, with_aqi: bool = True):
+    def __init__(self, path: str, dist_threshold: float = 5, seq_len: int = 8, with_aqi: bool = True):
         self.__dist_threshold = dist_threshold
-        self.__seq_size = seq_size
+        self.__seq_len = seq_len
 
         sites_file_path = os.path.join(path, 'aq_sites_elv.csv')
         ac_file_path = os.path.join(path, 'aq_met_daily.csv')
@@ -67,10 +67,10 @@ class AirConditionDataset(Dataset):
                 self.__air_conditions[date - min_date, :, -1] = cal_aqi(self.__air_conditions[date - min_date, :, 2:8])
 
     def __len__(self):
-        return self.__air_conditions.shape[0] - self.__seq_size + 1
+        return self.__air_conditions.shape[0] - self.__seq_len + 1
 
     def __getitem__(self, idx):
-        return self.__air_conditions[idx:idx + self.__seq_size]
+        return self.__air_conditions[idx:idx + self.__seq_len]
 
     @property
     def adjacent_matrix(self):

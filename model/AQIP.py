@@ -16,18 +16,20 @@ class AQIP(nn.Module):
         self.rnns = [
             nn.LSTM(input_size=128, hidden_size=128, num_layers=8, bias=True, batch_first=True),
         ]
-        self.linear = nn.Linear(in_features=8, out_features=1, bias=True)
+        self.linear = nn.Linear(in_features=128 * seq_len, out_features=1, bias=True)
 
-    def forward(self, x: torch.Tensor):
-        h, c = torch.zeros(size=(8, x.size(0), 128)), torch.zeros(size=(8, x.size(0), 128))
+    def forward(self, x: torch.Tensor, site_idx: int):
+        h = torch.zeros(size=(8, x.size(0), 128))
+        c = torch.zeros(size=(8, x.size(0), 128))
         for gat in self.gat_layers:
             x = gat(x)
-        for i in range(x.size(2)):
-            for rnn in self.rnns:
-                x[:, :, i, :], (h, c) = rnn(x[:, :, i, :], (h, c))
-            print(h.shape)
+        for rnn in self.rnns:
+            x[:, :, site_idx, :], (h, c) = rnn(x[:, :, site_idx, :], (h, c))
+        h = h.permute(1, 0, 2)
+        return self.linear(h.reshape(h.size(0), -1))
+
 
 
 if __name__ == '__main__':
     model = AQIP(np.array([[1, 0, 0], [0, 1, 1], [1, 1, 1]]), seq_len=8)
-    print(model(torch.randn(10, 8, 3, 17)))
+    print(model(torch.randn(10, 8, 3, 17), 1).shape)
