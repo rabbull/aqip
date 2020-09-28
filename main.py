@@ -1,8 +1,22 @@
-import torchvision
+import config
 
 
 def main():
-    model = torchvision.models.resnet152(pretrained=True)
+    if config.PROCESS == 'TRAIN':
+        pass
+    elif config.PROCESS == 'TEST':
+        pass
+    else:
+        raise NotImplementedError
+
+
+def train():
+    pass
+
+
+def test():
+    pass
+
 
 if __name__ == '__main__':
     main()
