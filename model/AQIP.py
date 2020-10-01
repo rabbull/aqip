@@ -16,7 +16,7 @@ class AQIP(nn.Module):
         self.rnns = [
             nn.LSTM(input_size=128, hidden_size=128, num_layers=4, bias=True, batch_first=True),
         ]
-        self.linear = nn.Linear(in_features=128 * seq_len, out_features=1, bias=True)
+        self.linear = nn.Linear(in_features=128 * 4, out_features=1, bias=True)
 
     def forward(self, x: torch.Tensor, site_idx: int):
         h = torch.zeros(size=(4, x.size(0), 128))
@@ -26,7 +26,8 @@ class AQIP(nn.Module):
         for rnn in self.rnns:
             x[:, :, site_idx, :], (h, c) = rnn(x[:, :, site_idx, :], (h, c))
         h = h.permute(1, 0, 2)
-        return self.linear(h.reshape(h.size(0), -1))
+        h = h.reshape(h.size(0), -1)
+        return self.linear(h).squeeze()
 
 
 if __name__ == '__main__':

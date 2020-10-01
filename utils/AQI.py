@@ -100,9 +100,18 @@ def co_iaqi(row: np.array):
 
 
 def cal_aqi(ac: np.array) -> np.array:
+    shape = ac.shape
+    ac = ac.reshape(-1, shape[-1])
+
     iaqi = np.copy(ac)
 
     for f in [pm25_iaqi, pm10_iaqi, o3_iaqi, so2_iaqi, no2_iaqi, co_iaqi]:
         np.apply_along_axis(f, 0, iaqi)
 
-    return np.max(iaqi, axis=1)
+    aqi = np.max(iaqi, axis=1)
+    return aqi.reshape(*shape[:-1])
+
+
+if __name__ == '__main__':
+    # TODO: verify `cal_aqi()`
+    print(cal_aqi(np.random.randn(10, 11, 12, 13, 5)).shape)

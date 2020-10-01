@@ -15,6 +15,7 @@ class AirConditionDataset(Dataset):
         self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len
+        self.__with_aqi = with_aqi
 
         sites_file_path = os.path.join(path, 'aq_sites_elv.csv')
         ac_file_path = os.path.join(path, 'aq_met_daily.csv')
@@ -65,17 +66,21 @@ class AirConditionDataset(Dataset):
             air_condition = air_conditions[date]
             for ent in air_condition:
                 self.__air_conditions[date - min_date, ent[0], :dim_data] = np.array(ent[1:])
-            if with_aqi:
-                self.__air_conditions[date - min_date, :, -1] = cal_aqi(self.__air_conditions[date - min_date, :, 2:8])
+        if with_aqi:
+            self.__air_conditions[:, :, -1] = cal_aqi(self.__air_conditions[:, :, 2:8])
 
     def __len__(self):
         return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step + 1
 
     def __getitem__(self, idx):
-        return {
-            'seq': self.__air_conditions[idx:idx + self.__seq_len],
-            'label': self.__air_conditions[idx + self.__seq_len + self.__pred_time_step]
+        ret = {
+            'seq': self.__air_conditions[idx:idx + self.__seq_len]
         }
+        if self.__with_aqi:
+            ret['label'] = self.__air_conditions[idx + self.__seq_len + self.__pred_time_step, :, -1]
+        else:
+            ret['label'] = cal_aqi(self.__air_conditions[idx + self.__seq_len + self.__pred_time_step, :, 2:8])
+        return ret
 
     @property
     def adjacent_matrix(self):
@@ -84,7 +89,7 @@ class AirConditionDataset(Dataset):
 
 if __name__ == '__main__':
     dataset = AirConditionDataset('/mnt/airlab/data', seq_len=5, pred_time_step=7, with_aqi=True)
-    data_loader = DataLoader(dataset, shuffle=True, batch_size=3)
+    data_loader = DataLoader(dataset, shuffle=True, batch_size=16)
     for idx, data in enumerate(data_loader):
         print(idx, data['seq'].shape, data['label'].shape)
         if idx > 2:
