@@ -1,9 +1,9 @@
 import math
-from utils import meter
+from .meter import Meter
 import torch
 
 
-class MSEMeter(meter.Meter):
+class MSEMeter(Meter):
     def __init__(self, root=False):
         super(MSEMeter, self).__init__()
         self.reset()

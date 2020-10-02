@@ -11,7 +11,7 @@ from utils.AQI import cal_aqi
 
 class AirConditionDataset(Dataset):
     def __init__(self, path: str, pred_time_step: int, dist_threshold: float = 5, seq_len: int = 8,
-                 with_aqi: bool = True):
+                 with_aqi: bool = True, traing: bool = True):
         self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len

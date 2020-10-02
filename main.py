@@ -1,9 +1,13 @@
-import config
 import time
+import torch
 
 import torch.nn as nn
+from torch.utils.data.dataloader import DataLoader
 
-from utils import meter
+import config
+import utils.meter as meter
+from dataset import AirConditionDataset
+from model.AQIP import AQIP
 
 
 def main():
@@ -46,6 +50,22 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
 
 
 def train():
+    training_data_set = AirConditionDataset('/mnt/airlab/data', seq_len=config.SEQ_LENGTH,
+                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True)
+
+    training_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
+                                      num_workers=config.NUM_WORKERS)
+
+    AQIP_net = AQIP(training_data_loader.dataset.adjacent_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
+
+    # for epoch in config.MAX_EPOCH:
+    #     train_epoch(AQIP_net, criterion, training_data_loader, optimizer,site_id=)
+
+
+
     pass
 
 

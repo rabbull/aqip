@@ -6,3 +6,7 @@ NUM_WORKERS = 6  # number of workers that loads data
 BATCH_SIZE = 16
 MAX_EPOCH = 250
 RESUME = False
+SEQ_LENGTH = 5
+PRE_TIME_STEP = 7
+LEARNING_RATE = 0.001
+MOMENTUM = 0.9
