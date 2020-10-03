@@ -8,10 +8,14 @@ from torch.utils.data.dataloader import DataLoader
 
 from utils.AQI import cal_aqi
 
+STATUS_TRIAN = 'train'
+STATUS_VALID = 'validation'
+STATUS_TEST = 'test'
+
 
 class AirConditionDataset(Dataset):
     def __init__(self, path: str, pred_time_step: int, dist_threshold: float = 5, seq_len: int = 8,
-                 with_aqi: bool = True, traing: bool = True):
+                 with_aqi: bool = True, status=STATUS_TRIAN):
         self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len
@@ -52,22 +56,32 @@ class AirConditionDataset(Dataset):
                 [site_index] + site_position + [float(d) if d != '' else 0 for d in row[2:]])
         ac_file.close()
 
-        self.__n_sites = len(self.__site_positions)
+        self.n_sites = len(self.__site_positions)
         self.__site_positions = np.array(self.__site_positions, dtype='float32')
-        self.__distances = np.zeros([self.__n_sites, self.__n_sites], dtype='float32')
-        for i in range(self.__n_sites):
+        self.__distances = np.zeros([self.n_sites, self.n_sites], dtype='float32')
+        for i in range(self.n_sites):
             self.__distances[i, :] = np.sqrt(np.sum((self.__site_positions - self.__site_positions[i, :]) ** 2, axis=1))
         self.__adj = self.__distances < np.sqrt(self.__dist_threshold)
 
         air_conditions = self.__air_conditions
         dim_data = len(air_conditions[min_date][0]) - 1
-        self.__air_conditions = np.zeros([max_date - min_date + 1, self.__n_sites, dim_data + int(with_aqi)])
+        self.__air_conditions = np.zeros([max_date - min_date + 1, self.n_sites, dim_data + int(with_aqi)])
         for date in air_conditions.keys():
             air_condition = air_conditions[date]
             for ent in air_condition:
                 self.__air_conditions[date - min_date, ent[0], :dim_data] = np.array(ent[1:])
         if with_aqi:
             self.__air_conditions[:, :, -1] = cal_aqi(self.__air_conditions[:, :, 2:8])
+
+        # Alter the dataset with respect to the status parameter
+        if status is STATUS_TRIAN:
+            self.__air_conditions = self.__air_conditions[:self.__air_conditions.shape[0] * 0.4, :, :]
+        elif status is STATUS_TEST:
+            self.__air_conditions = self.__air_conditions[
+                                    self.__air_conditions.shape[0] * 0.4 : self.__air_conditions.shape[0] * 0.7, :, :]
+        elif status is STATUS_VALID:
+            self.__air_conditions = self.__air_conditions[
+                                    self.__air_conditions.shape[0] * 0.7:, :, :]
 
     def __len__(self):
         return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step + 1
@@ -89,10 +103,10 @@ class AirConditionDataset(Dataset):
 
 if __name__ == '__main__':
     dataset = AirConditionDataset('/mnt/airlab/data', seq_len=5, pred_time_step=7, with_aqi=True)
-    data_loader = DataLoader(dataset, shuffle=True, batch_size=16)
-    for idx, data in enumerate(data_loader):
-        print(idx, data['seq'].shape, data['label'].shape)
-        if idx > 2:
-            break
-    print(data_loader.dataset.adjacent_matrix.shape)
+    # data_loader = DataLoader(dataset, shuffle=True, batch_size=16)
+    # for idx, data in enumerate(data_loader):
+    #     print(idx, data['seq'].shape, data['label'].shape)
+    #     if idx > 2:
+    #         break
+    print(dataset.__len__())
     # TODO: verify

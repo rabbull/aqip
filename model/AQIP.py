@@ -9,6 +9,7 @@ class AQIP(nn.Module):
     def __init__(self, adj: np.array, seq_len: int, with_aqi: bool = True):
         super().__init__()
         self.hid_size = 128
+        self.seq_len = seq_len
         self.gat_layers = [
             GATLayer(input_dim=16 + int(with_aqi), output_dim=128, adj=adj),
             GATLayer(input_dim=128, output_dim=128, adj=adj),

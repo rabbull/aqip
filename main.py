@@ -7,7 +7,10 @@ from torch.utils.data.dataloader import DataLoader
 import config
 import utils.meter as meter
 from dataset import AirConditionDataset
+import dataset.dataset as ds
 from model.AQIP import AQIP
+from utils.ModelRecorder import ModelRecorder
+from tensorboardX import SummaryWriter
 
 
 def main():
@@ -50,22 +53,60 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
 
 
 def train():
-    training_data_set = AirConditionDataset('/mnt/airlab/data', seq_len=config.SEQ_LENGTH,
-                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True)
+    summary_writer = SummaryWriter(comment=config.COMMENT)
+    training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
+                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TRIAN)
 
     training_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
                                       num_workers=config.NUM_WORKERS)
+    validation_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
+                                              pred_time_step=config.PRE_TIME_STEP, with_aqi=True,
+                                              status=ds.STATUS_VALID)
+
+    validation_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
+                                        num_workers=config.NUM_WORKERS)
+
+    print('count of train samples: ', len(training_data_set))
+    print('count of val samples: ', len(validation_data_set))
 
     AQIP_net = AQIP(training_data_loader.dataset.adjacent_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
+    AQIP_net = AQIP_net.to(device="cuda")
 
     criterion = nn.CrossEntropyLoss()
+    criterion = criterion.to(device="cuda")
     optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
 
-    # for epoch in config.MAX_EPOCH:
-    #     train_epoch(AQIP_net, criterion, training_data_loader, optimizer,site_id=)
+    recorder = ModelRecorder(save_file=config.CKPT_FILE, optimizer=optimizer, summary_writer=summary_writer)
 
+    resume_epoch = 0
+    if config.RESUME:
+        from_measurement = config.FROM_MEASUREMENT
+        model_state_dict, saved_epoch, opt_state_dict, best_performance = recorder.load(config.CKPT_FILE,
+                                                                                        from_measurement)
+        print(f"Loading model from {config.CKPT_FILE},saved epoch: {saved_epoch},"
+              f"{from_measurement}: {best_performance}")
+        AQIP_net.module.load_state_dict(model_state_dict)
+        optimizer.load_state_dict(opt_state_dict)
+        resume_epoch = saved_epoch + 1
+        print(f"Resume at epoch {resume_epoch}")
 
+    # Train a model for every station ?
+    # site_ids = range(0, training_data_loader.dataset.n_sites)
 
+    for epoch in range(resume_epoch, config.MAX_EPOCH):
+        optimizer.step()
+        # train
+        train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID)
+        # validation
+        with torch.no_grad():
+            acc, mAP = validation(validation_data_loader, AQIP_net, epoch)
+        # save checkpoint
+        recorder.add(epoch, AQIP_net, dict(acc=acc, mAP=mAP))
+        recorder.print_curr_stat()
+        print()
+
+    summary_writer.close()
+    print("\nTrain Finished!")
     pass
 
 
