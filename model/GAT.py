@@ -17,6 +17,7 @@ class GATLayer(nn.Module):
         hh = functional.linear(h, self.W)
         output = torch.zeros_like(hh)
         for i in range(self.n_points):
+          #  print(i)
             hhj = hh[:, :, self.adj[i], :]
             hhi = torch.cat([hh[:, :, i:i + 1, :]] * hhj.size(2), 2)
             hhij = torch.cat([hhi, hhj], 3)

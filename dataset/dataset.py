@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime
 import os
+import config
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -27,6 +28,9 @@ class AirConditionDataset(Dataset):
         ac_file = open(ac_file_path, 'r')
         sites_reader = csv.reader(sites_file)
         ac_reader = csv.reader(ac_file)
+
+        print(f"Dataset file read from: {sites_file_path} and {ac_file_path}")
+        print(f"Data mode: {status}")
 
         # skip headers
         sites_reader.__next__()
@@ -55,6 +59,7 @@ class AirConditionDataset(Dataset):
             self.__air_conditions[date].append(
                 [site_index] + site_position + [float(d) if d != '' else 0 for d in row[2:]])
         ac_file.close()
+        print("Dataset concatenated")
 
         self.n_sites = len(self.__site_positions)
         self.__site_positions = np.array(self.__site_positions, dtype='float32')
@@ -62,6 +67,7 @@ class AirConditionDataset(Dataset):
         for i in range(self.n_sites):
             self.__distances[i, :] = np.sqrt(np.sum((self.__site_positions - self.__site_positions[i, :]) ** 2, axis=1))
         self.__adj = self.__distances < np.sqrt(self.__dist_threshold)
+        print(f"Adjacency matrix calculated for {self.n_sites} sites")
 
         air_conditions = self.__air_conditions
         dim_data = len(air_conditions[min_date][0]) - 1
@@ -72,16 +78,19 @@ class AirConditionDataset(Dataset):
                 self.__air_conditions[date - min_date, ent[0], :dim_data] = np.array(ent[1:])
         if with_aqi:
             self.__air_conditions[:, :, -1] = cal_aqi(self.__air_conditions[:, :, 2:8])
+            print("AQI calculated")
 
         # Alter the dataset with respect to the status parameter
         if status is STATUS_TRIAN:
-            self.__air_conditions = self.__air_conditions[:self.__air_conditions.shape[0] * 0.4, :, :]
+            self.__air_conditions = self.__air_conditions[:int(self.__air_conditions.shape[0] * 0.4), :, :]
         elif status is STATUS_TEST:
             self.__air_conditions = self.__air_conditions[
-                                    self.__air_conditions.shape[0] * 0.4 : self.__air_conditions.shape[0] * 0.7, :, :]
+                                    int(self.__air_conditions.shape[0] * 0.4): int(self.__air_conditions.shape[0] * 0.7)
+            , :, :]
         elif status is STATUS_VALID:
             self.__air_conditions = self.__air_conditions[
-                                    self.__air_conditions.shape[0] * 0.7:, :, :]
+                                    int(self.__air_conditions.shape[0] * 0.7):, :, :]
+        print(f"Final data length in days:{self.__len__()}")
 
     def __len__(self):
         return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step + 1
@@ -97,7 +106,7 @@ class AirConditionDataset(Dataset):
         return ret
 
     @property
-    def adjacent_matrix(self):
+    def adjacency_matrix(self):
         return self.__adj
 
 

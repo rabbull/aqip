@@ -33,5 +33,8 @@ class AQIP(nn.Module):
 
 if __name__ == '__main__':
     model = AQIP(np.array([[1, 0, 0], [0, 1, 1], [1, 1, 1]]), seq_len=8)
-    print(model(torch.randn(10, 8, 3, 17), 1).shape)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    print(device)
+    print(model(torch.randn(10, 8, 1629, 17), 1).shape)
     # TODO: verify

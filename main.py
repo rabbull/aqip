@@ -26,7 +26,6 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
                 log_freq=None):
     model.train()
     mse_meter = meter.MSEMeter(root=True)
-
     t0 = time.time()
     for i, data in enumerate(data_loader):
         seq, target = data['seq'], data['label']
@@ -66,14 +65,16 @@ def train():
     validation_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
                                         num_workers=config.NUM_WORKERS)
 
-    print('count of train samples: ', len(training_data_set))
-    print('count of val samples: ', len(validation_data_set))
+    print('count of train days: ', len(training_data_set))
+    print('count of val days: ', len(validation_data_set))
 
     AQIP_net = AQIP(training_data_loader.dataset.adjacent_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
-    AQIP_net = AQIP_net.to(device="cuda")
+    device = torch.device(config.CUDA_DEVICE)
+    AQIP_net = AQIP_net.to(device)
+    AQIP_net = nn.DataParallel(AQIP_net)
 
     criterion = nn.CrossEntropyLoss()
-    criterion = criterion.to(device="cuda")
+    criterion = criterion.to(config.CUDA_DEVICE)
     optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
 
     recorder = ModelRecorder(save_file=config.CKPT_FILE, optimizer=optimizer, summary_writer=summary_writer)
@@ -99,9 +100,9 @@ def train():
         train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID)
         # validation
         with torch.no_grad():
-            acc, mAP = validation(validation_data_loader, AQIP_net, epoch)
+            MSE = validation(validation_data_loader, AQIP_net, epoch)
         # save checkpoint
-        recorder.add(epoch, AQIP_net, dict(acc=acc, mAP=mAP))
+        recorder.add(epoch, AQIP_net, dict(MSE=MSE))
         recorder.print_curr_stat()
         print()
 
@@ -112,6 +113,37 @@ def train():
 
 def test():
     pass
+
+
+def validation(data_loader, net: AQIP, epoch, site_id: int):
+    print(f'[ Validation summary ] epoch {epoch}:\n')
+    rst = evaluate(data_loader, net, site_id)
+    return rst
+
+
+def evaluate(data_loader, net: nn.Module, site_id: int):
+    mse_meter = meter.MSEMeter(root=True)
+    net.eval()
+
+    t0 = time.time()
+    for i, data in enumerate(data_loader):
+        seq, target = data['seq'], data['label']
+        seq = seq.cuda().float()
+        target = target[:, site_id]
+        target = target.cuda().float()
+        t1 = time.time()
+        aqi_pred = net(seq, site_id)
+        target = target.view(-1)
+        mse_meter.add(aqi_pred.detach(), target.detach())
+        t2 = time.time()
+        if i % config.PRINT_FEQ == 0:
+            print(f'[{i}/{len(data_loader)}]\t'
+                  f'Batch Time {t1 - t0:.3f}\t'
+                  f'Epoch Time {t2 - t1:.3f}\t'
+                  f'acc(c) {mse_meter.value():.3f}')
+    print(f'[ Validation summary ]:\n'
+          f'MSE: {mse_meter.value()}')
+    return mse_meter.value()
 
 
 if __name__ == '__main__':
