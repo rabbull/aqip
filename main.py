@@ -22,13 +22,13 @@ def main():
         raise NotImplementedError
 
 
-def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, site_id: int,
+def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, site_id: int, device,
                 log_freq=None):
     model.train()
     mse_meter = meter.MSEMeter(root=True)
     t0 = time.time()
     for i, data in enumerate(data_loader):
-        seq, target = data['seq'], data['label']
+        seq, target = data['seq'].to(device), data['label'].to(device)
         seq = seq.cuda().float()
         target = target[:, site_id]
         target = target.cuda().float()
@@ -68,7 +68,7 @@ def train():
     print('count of train days: ', len(training_data_set))
     print('count of val days: ', len(validation_data_set))
 
-    AQIP_net = AQIP(training_data_loader.dataset.adjacent_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
+    AQIP_net = AQIP(training_data_loader.dataset.adjacency_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
     device = torch.device(config.CUDA_DEVICE)
     AQIP_net = AQIP_net.to(device)
     AQIP_net = nn.DataParallel(AQIP_net)
@@ -97,7 +97,7 @@ def train():
     for epoch in range(resume_epoch, config.MAX_EPOCH):
         optimizer.step()
         # train
-        train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID)
+        train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID, device)
         # validation
         with torch.no_grad():
             MSE = validation(validation_data_loader, AQIP_net, epoch)

@@ -5,7 +5,7 @@ from torch.nn import functional
 
 
 class GATLayer(nn.Module):
-    def __init__(self, input_dim: int, output_dim: int, adj: np.array):
+    def __init__(self, input_dim: int, output_dim: int, adj: torch.tensor):
         super().__init__()
         self.W = nn.Parameter(torch.zeros(size=(output_dim, input_dim)))
         self.a = nn.Parameter(torch.zeros(size=(2 * output_dim,)))
@@ -17,7 +17,6 @@ class GATLayer(nn.Module):
         hh = functional.linear(h, self.W)
         output = torch.zeros_like(hh)
         for i in range(self.n_points):
-          #  print(i)
             hhj = hh[:, :, self.adj[i], :]
             hhi = torch.cat([hh[:, :, i:i + 1, :]] * hhj.size(2), 2)
             hhij = torch.cat([hhi, hhj], 3)
@@ -28,5 +27,7 @@ class GATLayer(nn.Module):
 
 
 if __name__ == '__main__':
-    model = GATLayer(3, 1024, np.array([[1, 0, 1], [0, 0, 1], [1, 0, 1]], dtype='bool'))
+    model = GATLayer(3, 1024, torch.tensor(np.array([[1, 0, 1], [0, 0, 1], [1, 0, 1]], dtype='bool')))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     print(model(torch.randn(5, 5, 3, 3)).shape)
