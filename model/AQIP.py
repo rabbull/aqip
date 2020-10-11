@@ -12,11 +12,11 @@ class AQIP(nn.Module):
         self.hid_size = 128
         self.seq_len = seq_len
         self.gat_layers = nn.ModuleList([
-            GATLayer(input_dim=16 + int(with_aqi), output_dim=128, adj=adj).cuda(),
-            GATLayer(input_dim=128, output_dim=128, adj=adj).cuda(),
+            GATLayer(input_dim=16 + int(with_aqi), output_dim=128, adj=adj),
+            GATLayer(input_dim=128, output_dim=128, adj=adj),
         ])
         self.rnns = nn.ModuleList([
-            nn.LSTM(input_size=128, hidden_size=128, num_layers=4, bias=True, batch_first=True).cuda(),
+            nn.LSTM(input_size=128, hidden_size=128, num_layers=4, bias=True, batch_first=True),
         ])
         self.linear = nn.Linear(in_features=128 * 4, out_features=1, bias=True)
 
