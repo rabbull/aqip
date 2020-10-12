@@ -21,15 +21,19 @@ class AQIP(nn.Module):
         self.linear = nn.Linear(in_features=128 * 4, out_features=1, bias=True)
 
     def forward(self, x: torch.Tensor, site_idx: int):
+        torch.autograd.set_detect_anomaly(True)
         h = torch.zeros(size=(4, x.size(0), 128)).cuda()
         c = torch.zeros(size=(4, x.size(0), 128)).cuda()
         for gat in self.gat_layers:
             x = gat(x)
         for rnn in self.rnns:
-            x[:, :, site_idx, :], (h, c) = rnn(x[:, :, site_idx, :], (h, c))
+            y = x[:, :, site_idx, :]
+            x[:, :, site_idx, :], (h, c) = rnn(y, (h, c))
         h = h.permute(1, 0, 2)
         h = h.reshape(h.size(0), -1)
-        return self.linear(h).squeeze()
+        h = self.linear(h)
+        h = h.squeeze()
+        return h
 
 
 if __name__ == '__main__':
@@ -37,7 +41,13 @@ if __name__ == '__main__':
     adj = torch.tensor(np.array([[1, 0, 0], [0, 1, 1], [1, 1, 1]]), dtype=torch.bool).cuda()
     exp = torch.randn(3, 8, 3, 17).cuda()
     gpus = [0]
+    #with torch.autograd.set_detect_anomaly(True):
     model = AQIP(adj, seq_len=8)
     model = model.to(device)
-    print(model(exp, 1))
+    criterion = nn.MSELoss()
+    criterion = criterion.to(device)
+    pred = model(exp, 1)
+    target = torch.randn(3).cuda()
+    loss = criterion(pred, target)
+    print(loss.backward())
     # TODO: verify
