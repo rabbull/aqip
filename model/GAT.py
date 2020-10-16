@@ -18,7 +18,7 @@ class GATLayer(nn.Module):
         output = torch.zeros_like(hh)
         for i in range(self.n_points):
             hhj = hh[:, :, self.adj[i], :]
-            hhi = torch.cat([hh[:, :, i:i + 1, :]] * hhj.size(2), 2)
+            hhi = torch.cat([hh[:, :, i:i + 1, :].clone()] * hhj.size(2), 2)
             hhij = torch.cat([hhi, hhj], 3)
             e = torch.mm(hhij.reshape(B * T * hhj.size(2), -1), self.a.reshape(self.a.size(0), 1)).reshape(B, T, -1)
             alpha = functional.softmax(e, dim=2)

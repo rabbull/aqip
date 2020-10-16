@@ -27,7 +27,7 @@ class AQIP(nn.Module):
         for gat in self.gat_layers:
             x = gat(x)
         for rnn in self.rnns:
-            y = x[:, :, site_idx, :]
+            y = x[:, :, site_idx, :].clone()
             x[:, :, site_idx, :], (h, c) = rnn(y, (h, c))
         h = h.permute(1, 0, 2)
         h = h.reshape(h.size(0), -1)
