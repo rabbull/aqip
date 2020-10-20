@@ -93,9 +93,11 @@ class AirConditionDataset(Dataset):
         print(f"Final data length in days:{self.__len__()}")
 
     def __len__(self):
-        return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step + 1
+        # print("Get length method called")
+        return self.__air_conditions.shape[0] - self.__seq_len - self.__pred_time_step
 
     def __getitem__(self, idx):
+        # print(f"fetching data at index {idx} ")
         ret = {
             'seq': self.__air_conditions[idx:idx + self.__seq_len]
         }
@@ -111,11 +113,12 @@ class AirConditionDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = AirConditionDataset('/mnt/airlab/data', seq_len=5, pred_time_step=7, with_aqi=True)
+    dataset = AirConditionDataset('/home/yuanhaozhu/GAT_covid19/data/', seq_len=config.SEQ_LENGTH,
+                                  pred_time_step=config.PRE_TIME_STEP, with_aqi=True)
     # data_loader = DataLoader(dataset, shuffle=True, batch_size=16)
     # for idx, data in enumerate(data_loader):
     #     print(idx, data['seq'].shape, data['label'].shape)
     #     if idx > 2:
     #         break
-    print(dataset.__len__())
+    print(dataset.__getitem__(dataset.__len__() - 1))
     # TODO: verify

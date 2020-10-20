@@ -47,7 +47,7 @@ class ModelRecorder:
             if key not in self.best_performance_dict:
                 curr_best = True
             else:
-                is_better = self.__default_comparator
+                is_better = self.__mse_comparator
                 if key in self.comparator_dict:
                     is_better = self.comparator_dict[key]
                 if is_better(performance_dict[key], self.best_performance_dict[key]):
@@ -70,6 +70,11 @@ class ModelRecorder:
     def __default_comparator(x, y):
         # x is better than y
         return x > y
+
+    @staticmethod
+    def __mse_comparator(x, y):
+        # smaller mse the better
+        return x < y
 
     def print_best_stat(self):
         for key in self.best_performance_dict:

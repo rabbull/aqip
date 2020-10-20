@@ -1,5 +1,6 @@
 import time
 import torch
+from tqdm import tqdm
 
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
@@ -22,26 +23,26 @@ def main():
         raise NotImplementedError
 
 
-def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, site_id: int,
+def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, site_id: int, epoch_num,
                 log_freq=None):
     model.train()
     mse_meter = meter.MSEMeter(root=True)
     t0 = time.time()
+    print(f"Training epoch {epoch_num}")
     for i, data in enumerate(data_loader):
-        with torch.autograd.set_detect_anomaly(True):
-            seq, target = data['seq'], data['label']
-            seq = seq.cuda().float()
-            target = target[:, site_id]
-            target = target.cuda().float()
-            t1 = time.time()
-            optimizer.zero_grad()
-            aqi_pred = model(seq, site_id)
-            target = target.view(-1)
-            mse_meter.add(aqi_pred.detach(), target.detach())
-            loss = criterion(aqi_pred, target)
-            loss.backward()
-            optimizer.step()
-            t2 = time.time()
+        seq, target = data['seq'], data['label']
+        seq = seq.cuda().float()
+        target = target[:, site_id]
+        target = target.cuda().float()
+        t1 = time.time()
+        optimizer.zero_grad()
+        aqi_pred = model(seq, site_id)
+        target = target.view(-1)
+        mse_meter.add(aqi_pred.detach(), target.detach())
+        loss = criterion(aqi_pred, target)
+        loss.backward()
+        optimizer.step()
+        t2 = time.time()
         if log_freq and (i + 1) % log_freq == 0:
             print(f"[{i}/{len(data_loader) - 1}] IterTime: {int((t2 - t0) * 1000)}\t"
                   f"DataTime: {int((t1 - t0) * 1000)}\t| "
@@ -66,8 +67,8 @@ def train():
     validation_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
                                         num_workers=config.NUM_WORKERS)
 
-    print('count of train days: ', len(training_data_set))
-    print('count of val days: ', len(validation_data_set))
+    print('count of train days: ', training_data_set.__len__())
+    print('count of val days: ', validation_data_set.__len__())
 
     AQIP_net = AQIP(training_data_loader.dataset.adjacency_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
     device = torch.device(config.CUDA_DEVICE)
@@ -97,7 +98,7 @@ def train():
     for epoch in range(resume_epoch, config.MAX_EPOCH):
         optimizer.step()
         # train
-        train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID)
+        train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID, epoch, config.PRINT_FEQ)
         # validation
         with torch.no_grad():
             MSE = validation(validation_data_loader, AQIP_net, epoch, config.SITE_ID)
