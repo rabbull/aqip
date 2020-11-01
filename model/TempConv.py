@@ -1,7 +1,5 @@
-import numpy as np
 import torch
 from torch import nn
-from torch.nn import functional
 
 
 class TempConvLayer(nn.Module):
@@ -9,7 +7,7 @@ class TempConvLayer(nn.Module):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.kt = kt  # The size of the conv kernel
+        self.kt = kt  # The size of the temp conv kernel
         self.act_fun = act_fun  # Indicating the activation function choice, GLU as default
         # Filter required for torch (out,in,H,W)
         if self.act_fun == 'GLU':
@@ -27,12 +25,13 @@ class TempConvLayer(nn.Module):
         if self.input_dim > self.output_dim:
             # bottleneck down-sampling
             # Manually padding SAME:  kernel_size − (input_length % stride)
+            # TODO Padding not correct when output dim is smaller
             x_input = torch.nn.functional.conv2d(x, self.w_input, stride=1, padding=(self.kt - T, 0))
         elif self.input_dim < self.output_dim:
             # if the size of input channel is less than the output,
             # padding x to the same size of output channel.
             # Note, _.get_shape() cannot convert a partially known TensorShape to a Tensor.
-            x_input = torch.cat([x, torch.zeros([x.shape[0], T, n, self.output_dim - self.input_dim])], 3)
+            x_input = torch.cat([x, torch.zeros([x.shape[0], self.output_dim - self.input_dim, T, n]).cuda()], 1)
         else:
             x_input = x
 
@@ -53,7 +52,8 @@ class TempConvLayer(nn.Module):
 
 
 if __name__ == '__main__':
-    model = TempConvLayer(20, 10, 3)
+    model = TempConvLayer(20, 30, 3)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    print(model(torch.randn(5, 5, 10, 20).to(device)).shape)
+    exp = torch.randn(5, 5, 3, 20).cuda()
+    print(model(exp).shape)
