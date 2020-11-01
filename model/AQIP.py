@@ -46,7 +46,6 @@ class AQIP(nn.Module):
             x = st_conv(x)
         x = x[:, :, site_idx, :].clone()
         x = x.reshape(x.size(0), -1)
-        print(x.shape)
         x = self.linear(x)
         return x.squeeze()
 
