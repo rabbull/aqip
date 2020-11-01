@@ -23,7 +23,7 @@ class AQIP(nn.Module):
         # ])
         self.st_conv_blocks = nn.ModuleList([
             STConvLayer(input_dim=16 + int(with_aqi), output_dim=128, kt=kt, adj=adj, act_fun=act_fun),
-            STConvLayer(input_dim=128, output_dim=128, kt=kt, adj=adj, act_fun=act_fun)
+            STConvLayer(input_dim=128, output_dim=128, kt=kt, adj=adj, act_fun=act_fun),
         ])
         time_step_length = self.seq_len - 2 * len(self.st_conv_blocks) * (kt - 1)
         print(time_step_length)

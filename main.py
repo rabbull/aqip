@@ -70,7 +70,8 @@ def train():
     print('count of train days: ', training_data_set.__len__())
     print('count of val days: ', validation_data_set.__len__())
 
-    AQIP_net = AQIP(training_data_loader.dataset.adjacency_matrix, seq_len=config.SEQ_LENGTH, with_aqi=True)
+    AQIP_net = AQIP(training_data_loader.dataset.adjacency_matrix, kt=config.KERNEL_SIZE,
+                    seq_len=config.SEQ_LENGTH, with_aqi=True)
     device = torch.device(config.CUDA_DEVICE)
     AQIP_net = AQIP_net.to(device)
 
