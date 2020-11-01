@@ -26,6 +26,7 @@ class AQIP(nn.Module):
             STConvLayer(input_dim=128, output_dim=128, kt=kt, adj=adj, act_fun=act_fun)
         ])
         time_step_length = self.seq_len - 2 * len(self.st_conv_blocks) * (kt - 1)
+        print(time_step_length)
         self.linear = nn.Linear(in_features=128 * time_step_length, out_features=1, bias=True)
 
     def forward(self, x: torch.Tensor, site_idx: int):
@@ -47,19 +48,19 @@ class AQIP(nn.Module):
         x = x.reshape(x.size(0), -1)
         print(x.shape)
         x = self.linear(x)
-        return x.sequeeze()
+        return x.squeeze()
 
 
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     adj = torch.tensor(np.array([[1, 0, 0], [0, 1, 1], [1, 1, 1]]), dtype=torch.bool).cuda()
     exp = torch.randn(3, 50, 3, 17).cuda()
-    model = AQIP(adj, seq_len=8, kt=3)
+    model = AQIP(adj, seq_len=50, kt=3)
     model = model.to(device)
     criterion = nn.MSELoss()
     criterion = criterion.to(device)
     pred = model(exp, 1)
-    target = torch.randn(128).cuda()
+    target = torch.randn(3).cuda()
     loss = criterion(pred, target)
     print(loss.backward())
     # TODO: verify
