@@ -7,8 +7,8 @@ from torch.nn import functional
 class GATLayer(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, adj: torch.tensor):
         super().__init__()
-        self.W = nn.Parameter(torch.zeros(size=(output_dim, input_dim)))
-        self.a = nn.Parameter(torch.zeros(size=(2 * output_dim,)))
+        self.W = nn.Parameter(torch.randn(size=(output_dim, input_dim)))
+        self.a = nn.Parameter(torch.randn(size=(2 * output_dim,)))
         self.adj = adj
         self.n_points = adj.shape[0]
 
@@ -30,4 +30,4 @@ if __name__ == '__main__':
     model = GATLayer(3, 1024, torch.tensor(np.array([[1, 0, 1], [0, 0, 1], [1, 0, 1]], dtype='bool')))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    print(model(torch.randn(5, 5, 3, 3)).shape)
+    print(model(torch.randn(5, 5, 3, 3)))

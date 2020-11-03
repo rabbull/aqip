@@ -11,11 +11,11 @@ class TempConvLayer(nn.Module):
         self.act_fun = act_fun  # Indicating the activation function choice, GLU as default
         # Filter required for torch (out,in,H,W)
         if self.act_fun == 'GLU':
-            self.W = nn.Parameter(torch.zeros(size=(2 * output_dim, input_dim, kt, 1)))
-            self.a = nn.Parameter(torch.zeros(2 * output_dim))
+            self.W = nn.Parameter(torch.randn(size=(2 * output_dim, input_dim, kt, 1)))
+            self.a = nn.Parameter(torch.randn(2 * output_dim))
         else:
-            self.W = nn.Parameter(torch.zeros(size=(output_dim, input_dim, kt, 1)))
-            self.a = nn.Parameter(torch.zeros(output_dim))
+            self.W = nn.Parameter(torch.randn(size=(output_dim, input_dim, kt, 1)))
+            self.a = nn.Parameter(torch.randn(output_dim))
         if self.input_dim > self.output_dim:
             self.w_input = nn.Parameter(torch.zeros(size=(output_dim, input_dim, 1, 1)))
 
@@ -56,4 +56,4 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     exp = torch.randn(5, 5, 3, 20).cuda()
-    print(model(exp).shape)
+    print(model(exp))

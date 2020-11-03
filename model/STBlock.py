@@ -23,6 +23,5 @@ if __name__ == '__main__':
     model = STConvLayer(17, 17, 3, torch.tensor(np.array([[1, 0, 1], [0, 0, 1], [1, 0, 1]], dtype='bool')))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    exp = torch.randn(3, 50, 3, 17).cuda()
-    exp = model(exp)
-    print(model(exp).shape)
+    exp = torch.randn(3, 20, 3, 17).cuda()
+    print(model(exp))
