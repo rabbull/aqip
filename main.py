@@ -58,7 +58,7 @@ def train():
     training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
                                             pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TRIAN)
 
-    training_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
+    training_data_loader = DataLoader(training_data_set, shuffle=True, batch_size=config.BATCH_SIZE,
                                       num_workers=config.NUM_WORKERS)
     validation_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
                                               pred_time_step=config.PRE_TIME_STEP, with_aqi=True,
@@ -114,8 +114,25 @@ def train():
 
 
 def test():
-    pass
+    test_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
+                                        pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TEST)
 
+    test_data_loader = DataLoader(test_data_set, shuffle=True, batch_size=config.BATCH_SIZE,
+                                  num_workers=config.NUM_WORKERS)
+
+    AQIP_net = AQIP(test_data_loader.dataset.adjacency_matrix, kt=config.KERNEL_SIZE,
+                    seq_len=config.SEQ_LENGTH, with_aqi=True)
+    device = torch.device(config.CUDA_DEVICE)
+    AQIP_net = AQIP_net.to(device)
+    model_recorder = ModelRecorder()
+    model_state_dict, saved_epoch, opt_state_dict, best_performance = model_recorder.load(config.CKPT_FILE,
+                                                                                          config.FROM_MEASUREMENT)
+    print(f"Loading model from {config.CKPT_FILE},saved epoch: {saved_epoch},"
+          f"{config.FROM_MEASUREMENT}: {best_performance}")
+    AQIP_net.load_state_dict(model_state_dict)
+    with torch.no_grad():
+        rst = evaluate(test_data_loader, AQIP_net, config.SITE_ID)
+    print(f"MSE: {rst}")
 
 def validation(data_loader, net, epoch, site_id: int):
     print(f'[ Validation summary ] epoch {epoch}:\n')
