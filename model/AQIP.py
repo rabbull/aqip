@@ -23,10 +23,10 @@ class AQIP(nn.Module):
         # ])
         self.st_conv_blocks = nn.ModuleList([
             STConvLayer(input_dim=16 + int(with_aqi), output_dim=64, kt=kt, adj=adj, act_fun=act_fun),
-            STConvLayer(input_dim=64, output_dim=64, kt=kt, adj=adj, act_fun=act_fun),
+            STConvLayer(input_dim=64, output_dim=128, kt=kt, adj=adj, act_fun=act_fun),
         ])
         time_step_length = self.seq_len - 2 * len(self.st_conv_blocks) * (kt - 1)
-        self.linear = nn.Linear(in_features=64 * time_step_length, out_features=1, bias=True)
+        self.linear = nn.Linear(in_features=128 * time_step_length, out_features=1, bias=True)
 
     def forward(self, x: torch.Tensor, site_idx: int):
         # torch.autograd.set_detect_anomaly(True)
@@ -51,7 +51,7 @@ class AQIP(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    adj = torch.tensor(np.array([[1, 1, 1],[1, 1, 1],[1, 1, 1]]), dtype=torch.bool).cuda()
+    adj = torch.tensor(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]]), dtype=torch.bool).cuda()
     exp = torch.randn(3, 10, 3, 17).cuda()
     model = AQIP(adj, seq_len=10, kt=3)
     model = model.to(device)

@@ -26,7 +26,7 @@ class TempConvLayer(nn.Module):
             # bottleneck down-sampling
             # Manually padding SAME:  kernel_size − (input_length % stride)
             # TODO Padding not correct when output dim is smaller
-            x_input = torch.nn.functional.conv2d(x, self.w_input, stride=1, padding=(self.kt - T, 0))
+            x_input = torch.nn.functional.conv2d(x, self.w_input, stride=(1, 1), padding=(self.kt - T, 0))
         elif self.input_dim < self.output_dim:
             # if the size of input channel is less than the output,
             # padding x to the same size of output channel.
@@ -37,10 +37,11 @@ class TempConvLayer(nn.Module):
 
         x_input = x_input[:, :, self.kt - 1:T, :].clone()
 
-        x_conv = torch.nn.functional.conv2d(x, self.W, self.a, stride=1)
+        x_conv = torch.nn.functional.conv2d(x, self.W, self.a, stride=(1, 1))
 
         if self.act_fun == "GLU":
-            return torch.nn.functional.glu(x_conv, dim=1).permute(0, 2, 3, 1)
+            return ((x_conv[:, 0:self.output_dim, :, :] + x_input) * torch.sigmoid(
+                x_conv[:, -self.output_dim:, :, :])).permute(0, 2, 3, 1)
         if self.act_fun == 'linear':
             return x_conv.permute(0, 2, 3, 1)
         elif self.act_fun == 'sigmoid':
@@ -52,8 +53,8 @@ class TempConvLayer(nn.Module):
 
 
 if __name__ == '__main__':
-    model = TempConvLayer(20, 30, 3)
+    model = TempConvLayer(20, 10, 3)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     exp = torch.randn(5, 5, 3, 20).cuda()
-    print(model(exp))
+    print(model(exp).shape)

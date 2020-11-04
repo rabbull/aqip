@@ -1,4 +1,4 @@
-PROCESS = 'TRAIN'  # should be either 'TRAIN' or 'TEST'
+PROCESS = 'TEST'  # should be either 'TRAIN' or 'TEST'
 DATASET_DIR = '../data'  # path to dataset
 RESULT_DIR = '../result'  # path to result
 CUDA_DEVICE = 'cuda:0'  # gpu(s) to use
@@ -17,5 +17,5 @@ CKPT_FOLDER = f"{RESULT_SUB_FOLDER}/ckpt"
 CKPT_FILE = f"{CKPT_FOLDER}/ckpt.pth"
 CKPT_RECORD_FOLDER = f"{CKPT_FOLDER}/record"
 FROM_MEASUREMENT = "MSE"  # The measurement taken to determine the best model
-SITE_ID = 1
+SITE_ID = 23
 PRINT_FEQ = 25
