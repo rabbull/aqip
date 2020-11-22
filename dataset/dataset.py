@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 import os
 import config
+from sklearn.preprocessing import MinMaxScaler
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -9,14 +10,14 @@ from torch.utils.data.dataloader import DataLoader
 
 from utils.AQI import cal_aqi
 
-STATUS_TRIAN = 'train'
+STATUS_TRAIN = 'train'
 STATUS_VALID = 'validation'
 STATUS_TEST = 'test'
 
 
 class AirConditionDataset(Dataset):
     def __init__(self, path: str, pred_time_step: int, dist_threshold: float = 5, seq_len: int = 8,
-                 with_aqi: bool = True, status=STATUS_TRIAN):
+                 with_aqi: bool = True, status=STATUS_TRAIN):
         self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len
@@ -80,8 +81,20 @@ class AirConditionDataset(Dataset):
             self.__air_conditions[:, :, -1] = cal_aqi(self.__air_conditions[:, :, 2:8])
             print("AQI calculated")
 
+        # Scale the dataset
+
+        sizes = self.__air_conditions.shape
+        scaler_seq = MinMaxScaler(feature_range=(0, 1))
+        scaler_label = MinMaxScaler(feature_range=(0, 1))
+        self.__air_conditions = self.__air_conditions.reshape(-1, self.__air_conditions.shape[2])
+        self.__air_conditions[:, :-1] = scaler_seq.fit_transform(self.__air_conditions[:, :-1])
+        self.__air_conditions[:, -1] = scaler_label.fit_transform(self.__air_conditions[:, -1].reshape(-1, 1)).reshape(-1)
+        self.__data_scaler = scaler_label
+        self.__air_conditions = self.__air_conditions.reshape(sizes[0], sizes[1], sizes[2])
+        print("Dataset Scaled for LSTM")
+
         # Alter the dataset with respect to the status parameter
-        if status is STATUS_TRIAN:
+        if status is STATUS_TRAIN:
             self.__air_conditions = self.__air_conditions[:int(self.__air_conditions.shape[0] * 0.4), :, :]
         elif status is STATUS_TEST:
             self.__air_conditions = self.__air_conditions[
@@ -90,6 +103,8 @@ class AirConditionDataset(Dataset):
         elif status is STATUS_VALID:
             self.__air_conditions = self.__air_conditions[
                                     int(self.__air_conditions.shape[0] * 0.7):, :, :]
+
+
         print(f"Final data length in days:{self.__len__()}")
 
     def __len__(self):
@@ -111,6 +126,9 @@ class AirConditionDataset(Dataset):
     def adjacency_matrix(self):
         return self.__adj
 
+    @property
+    def scaler(self):
+        return self.__data_scaler
 
 if __name__ == '__main__':
     dataset = AirConditionDataset('/home/yuanhaozhu/GAT_covid19/data/', seq_len=config.SEQ_LENGTH,
