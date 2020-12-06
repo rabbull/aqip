@@ -6,6 +6,7 @@ from torch.autograd import Variable
 
 from model.GAT import GATLayer
 from model.STBlock import STConvLayer
+from model.GConvLSTM import GConvLSTM
 import os
 
 
@@ -14,9 +15,18 @@ class AQIP(nn.Module):
         super().__init__()
         self.hid_size = 64
         self.num_layers = 1
+        self.adj = adj
         # TODO Change hid_size to 64 cause Error of:
         #  The expanded size of the tensor (128) must match the existing size (64) at non-singleton dimension 2
         self.seq_len = seq_len
+        self.GConvLSTMlayers = nn.ModuleList([
+            GConvLSTM(input_size=16 + int(with_aqi), hidden_size=self.hid_size, adj=self.adj),
+            GConvLSTM(input_size=self.hid_size, hidden_size=self.hid_size, adj=self.adj),
+        ])
+        self.linear = nn.Linear(in_features=self.hid_size, out_features=1, bias=True)
+
+        # For GAT + LSTM performance, use the code below:
+        '''
         self.gat_layers = nn.ModuleList([
             GATLayer(input_dim=16 + int(with_aqi), output_dim=64, adj=adj),
             GATLayer(input_dim=64, output_dim=128, adj=adj),
@@ -28,6 +38,7 @@ class AQIP(nn.Module):
                     batch_first=True),
         ])
         self.linear = nn.Linear(in_features=self.hid_size * self.num_layers, out_features=1, bias=True)
+        '''
 
         # For Spatial Temporal Convolution net, use the code below:
         '''
@@ -42,6 +53,18 @@ class AQIP(nn.Module):
 
 
     def forward(self, x: torch.Tensor, site_idx: int):
+        h = Variable(torch.zeros(x.shape[0], self.adj.shape[0], self.hid_size).cuda())
+        c = Variable(torch.zeros(x.shape[0], self.adj.shape[0], self.hid_size).cuda())
+        for GConvlstm in self.GConvLSTMlayers:
+            x, (h, c) = GConvlstm(x, (h, c))
+        h = h[:, site_idx, :].clone()
+        h = h.reshape(x.shape[0], -1)
+        h = self.linear(h)
+        h = h.squeeze()
+        return h
+
+        # GAT + LSTM code:
+        '''
         for gat in self.gat_layers:
             x = gat(x)
         h = Variable(torch.zeros(size=(self.num_layers, x.shape[0], self.hid_size)).cuda())
@@ -56,6 +79,7 @@ class AQIP(nn.Module):
         h = self.linear(h)
         h = h.squeeze()
         return h
+        '''
 
         # For the Spatial Temporal Convolution Net, use the following code
         '''
@@ -73,7 +97,7 @@ class AQIP(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    adj = torch.tensor(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]]), dtype=torch.bool).cuda()
+    adj = torch.tensor(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]]), dtype=torch.float).cuda()
     exp = torch.randn(config.BATCH_SIZE, config.SEQ_LENGTH, 3, 17).cuda()
     model = AQIP(adj, seq_len=config.SEQ_LENGTH, kt=3)
     model = model.to(device)

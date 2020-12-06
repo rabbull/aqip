@@ -56,7 +56,8 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
 def train():
     summary_writer = SummaryWriter(comment=config.COMMENT)
     training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
-                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TRAIN)
+                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TRAIN,
+                                            adj_trainable=True)
 
     training_data_loader = DataLoader(training_data_set, shuffle=True, batch_size=config.BATCH_SIZE,
                                       num_workers=config.NUM_WORKERS)
@@ -77,7 +78,7 @@ def train():
 
     criterion = nn.MSELoss()
     criterion = criterion.to(config.CUDA_DEVICE)
-    optimizer = torch.optim.Adam(AQIP_net.parameters(), lr=config.LEARNING_RATE)
+    optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
 
     recorder = ModelRecorder(save_file=config.CKPT_FILE, optimizer=optimizer, summary_writer=summary_writer)
 

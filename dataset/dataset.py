@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 import numpy as np
 from torch.utils.data import Dataset
+import torch
 from torch.utils.data.dataloader import DataLoader
 
 from utils.AQI import cal_aqi
@@ -17,12 +18,12 @@ STATUS_TEST = 'test'
 
 class AirConditionDataset(Dataset):
     def __init__(self, path: str, pred_time_step: int, dist_threshold: float = 5, seq_len: int = 8,
-                 with_aqi: bool = True, status=STATUS_TRAIN):
+                 with_aqi: bool = True, status=STATUS_TRAIN, adj_trainable=False):
         self.__pred_time_step = pred_time_step
         self.__dist_threshold = dist_threshold
         self.__seq_len = seq_len
         self.__with_aqi = with_aqi
-
+        self.adj_trainable = adj_trainable
         sites_file_path = os.path.join(path, 'aq_sites_elv.csv')
         ac_file_path = os.path.join(path, 'aq_met_daily.csv')
         sites_file = open(sites_file_path, 'r')
@@ -68,6 +69,11 @@ class AirConditionDataset(Dataset):
         for i in range(self.n_sites):
             self.__distances[i, :] = np.sqrt(np.sum((self.__site_positions - self.__site_positions[i, :]) ** 2, axis=1))
         self.__adj = self.__distances < np.sqrt(self.__dist_threshold)
+
+
+        ''' Use sparse representation of the matrix '''
+
+
         print(f"Adjacency matrix calculated for {self.n_sites} sites")
 
         air_conditions = self.__air_conditions
@@ -124,6 +130,9 @@ class AirConditionDataset(Dataset):
 
     @property
     def adjacency_matrix(self):
+        # The GConvLSTM need the adjacency matrix to be a trainable parameter
+        if self.adj_trainable:
+            return torch.tensor(self.__adj, dtype=torch.float)
         return self.__adj
 
     @property
