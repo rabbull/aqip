@@ -35,13 +35,16 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
         target = target[:, site_id]
         target = target.cuda().float()
         t1 = time.time()
-        optimizer.zero_grad()
+
         aqi_pred = model(seq, site_id)
         target = target.view(-1)
         mse_meter.add(aqi_pred.detach(), target.detach())
         loss = criterion(aqi_pred, target)
+
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
         t2 = time.time()
         if log_freq and (i + 1) % log_freq == 0:
             print(f"[{i}/{len(data_loader) - 1}] IterTime: {int((t2 - t0) * 1000)}\t"
@@ -55,9 +58,17 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
 
 def train():
     summary_writer = SummaryWriter(comment=config.COMMENT)
-    training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
-                                            pred_time_step=config.PRE_TIME_STEP, with_aqi=True, status=ds.STATUS_TRAIN,
-                                            adj_trainable=True)
+
+    # When using GConvLSTM, we need the adjacency matrix to be a tensor
+    if config.COMMENT == 'GConvLSTM':
+        training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
+                                                pred_time_step=config.PRE_TIME_STEP, with_aqi=True,
+                                                status=ds.STATUS_TRAIN,
+                                                adj_trainable=True)
+    else:
+        training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,
+                                                pred_time_step=config.PRE_TIME_STEP, with_aqi=True,
+                                                status=ds.STATUS_TRAIN)
 
     training_data_loader = DataLoader(training_data_set, shuffle=True, batch_size=config.BATCH_SIZE,
                                       num_workers=config.NUM_WORKERS)
@@ -65,7 +76,7 @@ def train():
                                               pred_time_step=config.PRE_TIME_STEP, with_aqi=True,
                                               status=ds.STATUS_VALID)
 
-    validation_data_loader = DataLoader(training_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
+    validation_data_loader = DataLoader(validation_data_set, shuffle=False, batch_size=config.BATCH_SIZE,
                                         num_workers=config.NUM_WORKERS)
 
     print('count of train days: ', training_data_set.__len__())
@@ -79,6 +90,9 @@ def train():
     criterion = nn.MSELoss()
     criterion = criterion.to(config.CUDA_DEVICE)
     optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
+
+    # Dynamically adjust the learning rate
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.4)
 
     recorder = ModelRecorder(save_file=config.CKPT_FILE, optimizer=optimizer, summary_writer=summary_writer)
 
@@ -94,11 +108,7 @@ def train():
         resume_epoch = saved_epoch + 1
         print(f"Resume at epoch {resume_epoch}")
 
-    # Train a model for every station ?
-    # site_ids = range(0, training_data_loader.dataset.n_sites)
-
     for epoch in range(resume_epoch, config.MAX_EPOCH):
-        optimizer.step()
         # train
         train_epoch(AQIP_net, criterion, training_data_loader, optimizer, config.SITE_ID, epoch, config.PRINT_FEQ)
         # validation
@@ -107,6 +117,7 @@ def train():
         # save checkpoint
         recorder.add(epoch, AQIP_net, dict(MSE=MSE))
         recorder.print_curr_stat()
+        # lr_scheduler.step(epoch)
         print()
 
     summary_writer.close()
@@ -134,6 +145,7 @@ def test():
     with torch.no_grad():
         rst = evaluate(test_data_loader, AQIP_net, config.SITE_ID)
     print(f"MSE: {rst}")
+
 
 def validation(data_loader, net, epoch, site_id: int):
     print(f'[ Validation summary ] epoch {epoch}:\n')

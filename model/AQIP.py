@@ -13,7 +13,7 @@ import os
 class AQIP(nn.Module):
     def __init__(self, adj: torch.tensor, seq_len: int, kt: int, with_aqi: bool = True, act_fun="GLU"):
         super().__init__()
-        self.hid_size = 64
+        self.hid_size = 128
         self.num_layers = 1
         self.adj = adj
         self.seq_len = seq_len
@@ -62,7 +62,7 @@ class AQIP(nn.Module):
             time_step_length = self.seq_len - 2 * len(self.st_conv_blocks) * (kt - 1)
             self.linear = nn.Linear(in_features=128 * time_step_length, out_features=1, bias=True)
         else:
-            raise NotImplementedError(f"chosen network {config.COMMENT} not implemented!")
+            raise NotImplementedError(f"Chosen network {config.COMMENT} not implemented!")
 
 
 
