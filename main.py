@@ -94,7 +94,7 @@ def train():
     optimizer = torch.optim.SGD(AQIP_net.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM)
 
     # Dynamically adjust the learning rate
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.4)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.4)
 
     recorder = ModelRecorder(save_file=config.CKPT_FILE, optimizer=optimizer, summary_writer=summary_writer)
 

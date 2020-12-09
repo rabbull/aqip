@@ -2,6 +2,7 @@ import torch
 from torch import nn
 
 
+
 class TempConvLayer(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, kt: int, act_fun: str = 'GLU'):
         super().__init__()

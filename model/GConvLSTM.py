@@ -48,7 +48,7 @@ class GConvLSTM(nn.Module):
                 torch.tanh(gates[:, :, HS * 2:HS * 3]),
                 torch.sigmoid(gates[:, :, HS * 3:]),  # output
             )
-            #print(f"{i_t.shape} \n {f_t.shape} \n {g_t.shape} \n {o_t.shape} ")
+
             c_t = torch.mul(f_t, c_t) + torch.mul(i_t, g_t)
             h_t = o_t * torch.tanh(c_t)
             hidden_seq.append(h_t.unsqueeze(0))
