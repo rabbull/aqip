@@ -99,14 +99,19 @@ class AirConditionDataset(Dataset):
         self.__air_conditions = self.__air_conditions.reshape(sizes[0], sizes[1], sizes[2])
         print("Dataset Scaled for LSTM")
 
+        # Now the dataset is in the shape of (time_step, n_stations, features)
+
         # Alter the dataset with respect to the status parameter
         if status is STATUS_TRAIN:
+            # For training, we take the data in the first 40% in the time axis
             self.__air_conditions = self.__air_conditions[:int(self.__air_conditions.shape[0] * 0.4), :, :]
         elif status is STATUS_TEST:
+            # For testing, we take the data in the 40% to 60% in the time axis
             self.__air_conditions = self.__air_conditions[
                                     int(self.__air_conditions.shape[0] * 0.4): int(self.__air_conditions.shape[0] * 0.7)
             , :, :]
         elif status is STATUS_VALID:
+            # For testing, we take the rest of the data
             self.__air_conditions = self.__air_conditions[
                                     int(self.__air_conditions.shape[0] * 0.7):, :, :]
 
@@ -142,10 +147,4 @@ class AirConditionDataset(Dataset):
 if __name__ == '__main__':
     dataset = AirConditionDataset('/home/yuanhaozhu/GAT_covid19/data/', seq_len=config.SEQ_LENGTH,
                                   pred_time_step=config.PRE_TIME_STEP, with_aqi=True)
-    # data_loader = DataLoader(dataset, shuffle=True, batch_size=16)
-    # for idx, data in enumerate(data_loader):
-    #     print(idx, data['seq'].shape, data['label'].shape)
-    #     if idx > 2:
-    #         break
     print(dataset.__getitem__(dataset.__len__() - 1))
-    # TODO: verify

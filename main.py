@@ -59,6 +59,8 @@ def train_epoch(model: nn.Module, criterion: nn.Module, data_loader, optimizer, 
 def train():
     summary_writer = SummaryWriter(comment=config.COMMENT)
 
+    #Load the data
+
     # When using GConvLSTM, we need the adjacency matrix to be a tensor
     if config.COMMENT == 'GConvLSTM':
         training_data_set = AirConditionDataset(config.DATASET_DIR, seq_len=config.SEQ_LENGTH,

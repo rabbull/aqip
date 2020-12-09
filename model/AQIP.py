@@ -17,9 +17,9 @@ class AQIP(nn.Module):
         self.num_layers = 1
         self.adj = adj
         self.seq_len = seq_len
+        print(f"Using {config.COMMENT} network")
         if config.COMMENT == "LSTM":
             # LSTM benchmark performance, use the code below:
-            print(f"Using {config.COMMENT} network")
             self.rnns = nn.ModuleList([
                 nn.LSTM(input_size=16 + int(with_aqi), hidden_size=self.hid_size, num_layers=self.num_layers,
                         batch_first=True),
@@ -30,7 +30,6 @@ class AQIP(nn.Module):
 
         elif config.COMMENT == "GConvLSTM":
             # GConvLSTM, use the code below:
-            print(f"Using {config.COMMENT} network")
             self.GConvLSTMlayers = nn.ModuleList([
                 GConvLSTM(input_size=16 + int(with_aqi), hidden_size=self.hid_size, adj=self.adj),
                 GConvLSTM(input_size=self.hid_size, hidden_size=self.hid_size, adj=self.adj),
@@ -39,7 +38,6 @@ class AQIP(nn.Module):
 
         elif config.COMMENT == "GAT+LSTM":
             # For GAT + LSTM performance, use the code below:
-            print(f"Using {config.COMMENT} network")
             self.gat_layers = nn.ModuleList([
                 GATLayer(input_dim=16 + int(with_aqi), output_dim=64, adj=adj),
                 GATLayer(input_dim=64, output_dim=128, adj=adj),
@@ -54,7 +52,6 @@ class AQIP(nn.Module):
 
         elif config.COMMENT == "GAT_CausalConv":
             # For Spatial Temporal Convolution net, use the code below:
-            print(f"Using {config.COMMENT} network")
             self.st_conv_blocks = nn.ModuleList([
                 STConvLayer(input_dim=16 + int(with_aqi), output_dim=128, kt=kt, adj=adj, act_fun=act_fun),
                 STConvLayer(input_dim=128, output_dim=128, kt=kt, adj=adj, act_fun='sigmoid'),

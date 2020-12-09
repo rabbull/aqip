@@ -5,6 +5,7 @@ import math
 
 '''
     The GConvLSTM replaces the matrix multiplication in the regular LSTM networks by the Graph Convolution 
+    Here we only tried the dense representation of the adjacency matrix, which did not out perform the naive lstm.
 '''
 
 
@@ -13,7 +14,7 @@ class GConvLSTM(nn.Module):
         super().__init__()
         self.input_sz = input_size
         self.hidden_size = hidden_size
-        self.adj = nn.Parameter(adj)
+        self.adj = nn.Parameter(adj)  # The Graph convolution lstm requires the adjacency matrix to be a parameter
         self.n_sites = self.adj.shape[0]
         self.W = nn.Parameter(torch.Tensor(input_size, hidden_size * 4))
         self.U = nn.Parameter(torch.Tensor(hidden_size, hidden_size * 4))
@@ -27,7 +28,7 @@ class GConvLSTM(nn.Module):
 
     def forward(self, x,
                 init_states=None):
-        """ Assumes x is of shape (batch, sequence, feature) """
+        """ Assumes x is of shape (batch, sequence,n_stations, feature) """
         batch_size, seq_size, _, _ = x.size()
         hidden_seq = []
         if init_states is None:
@@ -39,7 +40,7 @@ class GConvLSTM(nn.Module):
         HS = self.hidden_size
         for t in range(seq_size):
             x_t = x[:, t, :, :]
-            # batch the computations into a single matrix multiplication
+            # batch the computations into a single matrix multiplication (from github)
             gates = GConv(x_t, self.W, self.adj) + GConv(h_t, self.U, self.adj) + self.bias
             i_t, f_t, g_t, o_t = (
                 torch.sigmoid(gates[:, :, :HS]),  # input
@@ -62,9 +63,9 @@ def GConv(H: torch.tensor, W: torch.tensor, adj: torch.tensor):
     The Graph convolution in the paper is described as H * W = AHW
         where A is the adjacency matrix and H is the input with features and W is the weight of the layer
     """
-    #print(f"adj size = {adj.shape}\nH size = {H.shape}\nW size = {W.shape}\n")
     AH = torch.matmul(adj, H)
     AHW = torch.matmul(AH, W)
+
     return AHW
 
 
